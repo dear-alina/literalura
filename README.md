@@ -63,6 +63,7 @@ spring.jpa.properties.hibernate.format_sql=true
 
 ## 📖 Uso de la aplicación
 - Al ejecutar el programa, verás el menú principal:
+```
 ---------------------------------------------------
 Elige alguna opción usando los siguientes números:
 ---------------------------------------------------
@@ -73,7 +74,7 @@ Elige alguna opción usando los siguientes números:
 5 - Listar autores vivos en un año determinado
 6 - Listar libros por idioma
 0 - Salir
-
+```
 - Elige una opción e ingresa los datos que te pide, el programa hará su trabajo y te devolverá una impresión con lo solicitado :D
 ASÍ DE FÁCIL!!
 
