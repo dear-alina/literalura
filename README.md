@@ -74,8 +74,7 @@ Elige alguna opción usando los siguientes números:
 5 - Listar autores vivos en un año determinado
 6 - Listar libros por idioma
 0 - Salir
-```
-- Elige una opción e ingresa los datos que te pide, el programa hará su trabajo y te devolverá una impresión con lo solicitado :D
-ASÍ DE FÁCIL!!
 
----
+## 📖 Nuevo uso de la aplicación
+- Al ejecutar el programa, ya no se verá el menú principal pues se ha estructurado de forma que se pueda conectar a un fronted :D
+
