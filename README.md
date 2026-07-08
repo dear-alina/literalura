@@ -1,6 +1,6 @@
 # 📚 Literalura - Catálogo de Libros
 
-Literalura es una aplicación de consola desarrollada con **Spring Boot** que permite consultar libros desde la API pública [Gutendex](https://gutendex.com/), almacenarlos en una base de datos PostgreSQL y gestionar información sobre autores. 
+Literalura es una aplicación web desarrollada con **Spring Boot** que permite consultar libros desde la API pública [Gutendex](https://gutendex.com/), almacenarlos en una base de datos PostgreSQL y gestionar información sobre autores. 
 El programa ofrece un menú interactivo con varias opciones para buscar, listar y filtrar libros y autores.
 
 ---
