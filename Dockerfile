@@ -39,4 +39,8 @@ ENV JAVA_OPTS="-Xms256m -Xmx512m"
 EXPOSE 8080
 
 # Usamos sh -c para que evalúe la variable de entorno JAVA_OPTS correctamente
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS \
+  -Dspring.datasource.url=jdbc:postgresql://${DB_HOST}/postgres \
+  -Dspring.datasource.username=${DB_USER} \
+  -Dspring.datasource.password=${DB_PASSWORD} \
+  -jar app.jar"]
