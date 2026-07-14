@@ -31,16 +31,8 @@ public class LibroController {
     @PostMapping("/buscar-y-registrar")
     public ResponseEntity<LibroResponseDTO> buscarYRegistrar(
             @Valid @RequestBody BusquedaLibroDTO busqueda) {
-        try {
-            LibroResponseDTO respuesta = libroService.buscarYRegistrarLibro(busqueda);
-            return ResponseEntity.status(HttpStatus.CREATED).body(respuesta);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new LibroResponseDTO(null, null, null, null, null, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new LibroResponseDTO(null, null, null, null, null, "Error interno del servidor"));
-        }
+        LibroResponseDTO respuesta = libroService.buscarYRegistrarLibro(busqueda);
+        return ResponseEntity.status(HttpStatus.CREATED).body(respuesta);
     }
     
     @GetMapping("/busqueda-flexible")

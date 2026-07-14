@@ -11,6 +11,7 @@ import com.alurachallenge.literalura.dto.ActualizarLibroDTO;
 import com.alurachallenge.literalura.dto.ActualizarNotaDTO;
 import com.alurachallenge.literalura.dto.LibroActualizadoResponseDTO;
 import com.alurachallenge.literalura.dto.RespuestaGutendex;
+import com.alurachallenge.literalura.exception.LibroNoEncontradoException;
 import com.alurachallenge.literalura.exception.ResourceNotFoundException;
 import com.alurachallenge.literalura.model.Autor;
 import com.alurachallenge.literalura.model.Idioma;
@@ -45,7 +46,7 @@ public class LibroService {
         RespuestaGutendex respuesta = clienteGutendex.buscarLibrosPorTitulo(busqueda.titulo());
 
         if (respuesta == null || respuesta.resultados() == null || respuesta.resultados().isEmpty()) {
-            throw new RuntimeException("Libro no encontrado en Gutendex");
+            throw new LibroNoEncontradoException("Libro no encontrado en Gutendex: " + busqueda.titulo());
         }
 
         DatosGutendexLibro datosGutendex = respuesta.resultados().get(0);
@@ -140,13 +141,46 @@ public class LibroService {
         return convertirADetalleDTO(libro);
     }
 
+    @Transactional
     public LibroDetalleResponseDTO buscarLibroPorTitulo(String titulo) {
-        Libro libro = libroRepository.findByTitulo(titulo)
-            .orElseThrow(() -> new ResourceNotFoundException(
-                "Libro '" + titulo + "' no encontrado en la base de datos"
-            ));
-        
-        return convertirADetalleDTO(libro);
+        // Paso 1 & 2: Buscar en BD local primero (case-insensitive)
+        Optional<Libro> libroLocal = libroRepository.findByTituloIgnoreCase(titulo);
+        if (libroLocal.isPresent()) {
+            return convertirADetalleDTO(libroLocal.get());
+        }
+
+        // Paso 3: Miss local → consultar API externa Gutendex
+        RespuestaGutendex respuesta = clienteGutendex.buscarLibrosPorTitulo(titulo);
+
+        if (respuesta == null || respuesta.resultados() == null || respuesta.resultados().isEmpty()) {
+            // Paso 5: Miss completo
+            throw new LibroNoEncontradoException(
+                "Libro '" + titulo + "' no encontrado ni en la base de datos local ni en Gutendex"
+            );
+        }
+
+        // Paso 4: Hit externo → deduplicar por gutendexId y persistir
+        DatosGutendexLibro datosGutendex = respuesta.resultados().get(0);
+
+        if (datosGutendex.id() != null) {
+            Optional<Libro> porGutendexId = libroRepository.findByGutendexId(datosGutendex.id().intValue());
+            if (porGutendexId.isPresent()) {
+                return convertirADetalleDTO(porGutendexId.get());
+            }
+        }
+
+        Autor autor = obtenerOCrearAutor(datosGutendex.autores());
+
+        Libro nuevoLibro = new Libro();
+        nuevoLibro.setTitulo(datosGutendex.titulo());
+        nuevoLibro.setAutor(autor);
+        nuevoLibro.setIdioma(mapearIdioma(datosGutendex.idiomas()));
+        if (datosGutendex.id() != null) {
+            nuevoLibro.setGutendexId(datosGutendex.id().intValue());
+        }
+
+        Libro libroGuardado = libroRepository.save(nuevoLibro);
+        return convertirADetalleDTO(libroGuardado);
     }
     
     public Page<LibroListResponseDTO> listarTodosLosLibros(Pageable pageable) {
