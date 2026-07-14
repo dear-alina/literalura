@@ -6,6 +6,7 @@ import com.alurachallenge.literalura.dto.LibroDetalleResponseDTO;
 import com.alurachallenge.literalura.dto.LibroListResponseDTO;
 import com.alurachallenge.literalura.dto.LibrosPorIdiomaResponseDTO;
 import com.alurachallenge.literalura.dto.ActualizarLibroDTO;
+import com.alurachallenge.literalura.dto.ActualizarNotaDTO;
 import com.alurachallenge.literalura.dto.LibroActualizadoResponseDTO;
 import com.alurachallenge.literalura.service.LibroService;
 import jakarta.validation.Valid;
@@ -35,13 +36,20 @@ public class LibroController {
             return ResponseEntity.status(HttpStatus.CREATED).body(respuesta);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new LibroResponseDTO(null, null, null, null, e.getMessage()));
+                    .body(new LibroResponseDTO(null, null, null, null, null, e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new LibroResponseDTO(null, null, null, null, "Error interno del servidor"));
+                    .body(new LibroResponseDTO(null, null, null, null, null, "Error interno del servidor"));
         }
     }
     
+    @GetMapping("/busqueda-flexible")
+    public ResponseEntity<List<LibroListResponseDTO>> busquedaFlexible(
+            @RequestParam(required = false) String q) {
+        List<LibroListResponseDTO> resultado = libroService.buscarFlexible(q);
+        return ResponseEntity.ok(resultado);
+    }
+
     @GetMapping("/buscar")
     public ResponseEntity<LibroDetalleResponseDTO> buscarPorTitulo(
             @RequestParam String titulo) {
@@ -58,6 +66,20 @@ public class LibroController {
 
     }
     
+    @GetMapping("/{id}")
+    public ResponseEntity<LibroDetalleResponseDTO> obtenerLibroPorId(@PathVariable Long id) {
+        LibroDetalleResponseDTO respuesta = libroService.buscarLibroPorId(id);
+        return ResponseEntity.ok(respuesta);
+    }
+
+    @PatchMapping("/{id}/nota")
+    public ResponseEntity<LibroActualizadoResponseDTO> actualizarNota(
+            @PathVariable Long id,
+            @RequestBody ActualizarNotaDTO actualizacion) {
+        LibroActualizadoResponseDTO respuesta = libroService.actualizarNotaLibro(id, actualizacion);
+        return ResponseEntity.ok(respuesta);
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<LibroActualizadoResponseDTO> actualizarLibro(
             @PathVariable Long id,

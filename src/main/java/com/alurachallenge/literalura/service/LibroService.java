@@ -8,6 +8,7 @@ import com.alurachallenge.literalura.dto.LibroDetalleResponseDTO;
 import com.alurachallenge.literalura.dto.LibroListResponseDTO;
 import com.alurachallenge.literalura.dto.LibrosPorIdiomaResponseDTO;
 import com.alurachallenge.literalura.dto.ActualizarLibroDTO;
+import com.alurachallenge.literalura.dto.ActualizarNotaDTO;
 import com.alurachallenge.literalura.dto.LibroActualizadoResponseDTO;
 import com.alurachallenge.literalura.dto.RespuestaGutendex;
 import com.alurachallenge.literalura.exception.ResourceNotFoundException;
@@ -40,43 +41,49 @@ public class LibroService {
     private ClienteGutendex clienteGutendex;
     
     public LibroResponseDTO buscarYRegistrarLibro(BusquedaLibroDTO busqueda) {
-        // Verificar si el libro ya existe en BD
-        Optional<Libro> libroExistente = libroRepository.findByTitulo(busqueda.titulo());
-        if (libroExistente.isPresent()) {
-            Libro libro = libroExistente.get();
-            return new LibroResponseDTO(
-                libro.getId(),
-                libro.getTitulo(),
-                libro.getAutor() != null ? libro.getAutor().getNombre() : "Desconocido",
-                libro.getIdioma(),
-                "Libro ya existe en la base de datos"
-            );
-        }
-        
-        // Buscar en Gutendex
+        // Buscar en Gutendex primero para obtener el gutendexId real
         RespuestaGutendex respuesta = clienteGutendex.buscarLibrosPorTitulo(busqueda.titulo());
-        
+
         if (respuesta == null || respuesta.resultados() == null || respuesta.resultados().isEmpty()) {
             throw new RuntimeException("Libro no encontrado en Gutendex");
         }
-        
-        // Tomar el primer resultado
+
         DatosGutendexLibro datosGutendex = respuesta.resultados().get(0);
-        
+
+        // Deduplicar por gutendexId (más fiable que por título)
+        if (datosGutendex.id() != null) {
+            Optional<Libro> libroExistente = libroRepository.findByGutendexId(datosGutendex.id().intValue());
+            if (libroExistente.isPresent()) {
+                Libro libro = libroExistente.get();
+                return new LibroResponseDTO(
+                    libro.getId(),
+                    libro.getTitulo(),
+                    libro.getGutendexId(),
+                    libro.getAutor() != null ? libro.getAutor().getNombre() : "Desconocido",
+                    libro.getIdioma(),
+                    "Libro ya existe en la base de datos"
+                );
+            }
+        }
+
         // Crear o obtener autor
         Autor autor = obtenerOCrearAutor(datosGutendex.autores());
-        
+
         // Crear y guardar libro
         Libro nuevoLibro = new Libro();
         nuevoLibro.setTitulo(datosGutendex.titulo());
         nuevoLibro.setAutor(autor);
         nuevoLibro.setIdioma(mapearIdioma(datosGutendex.idiomas()));
-        
+        if (datosGutendex.id() != null) {
+            nuevoLibro.setGutendexId(datosGutendex.id().intValue());
+        }
+
         Libro libroGuardado = libroRepository.save(nuevoLibro);
-        
+
         return new LibroResponseDTO(
             libroGuardado.getId(),
             libroGuardado.getTitulo(),
+            libroGuardado.getGutendexId(),
             libroGuardado.getAutor() != null ? libroGuardado.getAutor().getNombre() : "Desconocido",
             libroGuardado.getIdioma(),
             "Libro registrado exitosamente"
@@ -116,6 +123,23 @@ public class LibroService {
         }
     }
     
+    public List<LibroListResponseDTO> buscarFlexible(String q) {
+        String termino = (q == null) ? "" : q.trim();
+        return libroRepository
+                .findByTituloContainingIgnoreCaseOrAutorNombreContainingIgnoreCase(termino, termino)
+                .stream()
+                .map(this::convertirAListDTO)
+                .collect(Collectors.toList());
+    }
+
+    public LibroDetalleResponseDTO buscarLibroPorId(Long id) {
+        Libro libro = libroRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "Libro con ID " + id + " no encontrado"
+            ));
+        return convertirADetalleDTO(libro);
+    }
+
     public LibroDetalleResponseDTO buscarLibroPorTitulo(String titulo) {
         Libro libro = libroRepository.findByTitulo(titulo)
             .orElseThrow(() -> new ResourceNotFoundException(
@@ -134,14 +158,15 @@ public class LibroService {
         return new LibroListResponseDTO(
             libro.getId(),
             libro.getTitulo(),
+            libro.getGutendexId(),
             libro.getAutor() != null ? libro.getAutor().getNombre() : "Desconocido",
             libro.getIdioma()
         );
     }
-    
+
     private LibroDetalleResponseDTO convertirADetalleDTO(Libro libro) {
         LibroDetalleResponseDTO.AutorDetalleDTO autorDTO = null;
-        
+
         if (libro.getAutor() != null) {
             Autor autor = libro.getAutor();
             autorDTO = new LibroDetalleResponseDTO.AutorDetalleDTO(
@@ -151,12 +176,14 @@ public class LibroService {
                 autor.getAnoFallecimiento()
             );
         }
-        
+
         return new LibroDetalleResponseDTO(
             libro.getId(),
             libro.getTitulo(),
+            libro.getGutendexId(),
             autorDTO,
-            libro.getIdioma()
+            libro.getIdioma(),
+            libro.getNota()
         );
     }
     
@@ -180,6 +207,26 @@ public class LibroService {
         }
     }
     
+    @Transactional
+    public LibroActualizadoResponseDTO actualizarNotaLibro(Long id, ActualizarNotaDTO actualizacion) {
+        Libro libro = libroRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "Libro con ID " + id + " no encontrado"
+            ));
+
+        libro.setNota(actualizacion.nota());
+        Libro libroActualizado = libroRepository.save(libro);
+
+        return new LibroActualizadoResponseDTO(
+            libroActualizado.getId(),
+            libroActualizado.getTitulo(),
+            libroActualizado.getAutor() != null ? libroActualizado.getAutor().getNombre() : "Desconocido",
+            libroActualizado.getIdioma(),
+            libroActualizado.getNota(),
+            "Nota actualizada exitosamente"
+        );
+    }
+
     public LibroActualizadoResponseDTO actualizarLibro(Long id, ActualizarLibroDTO actualizacion) {
         Libro libro = libroRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException(
@@ -206,6 +253,11 @@ public class LibroService {
                 throw new IllegalArgumentException("Código de idioma inválido: " + actualizacion.idioma());
             }
         }
+
+        // Actualizar nota si se proporciona (se permite vaciar enviando cadena vacía)
+        if (actualizacion.nota() != null) {
+            libro.setNota(actualizacion.nota().isBlank() ? null : actualizacion.nota());
+        }
         
         Libro libroActualizado = libroRepository.save(libro);
         
@@ -214,6 +266,7 @@ public class LibroService {
             libroActualizado.getTitulo(),
             libroActualizado.getAutor() != null ? libroActualizado.getAutor().getNombre() : "Desconocido",
             libroActualizado.getIdioma(),
+            libroActualizado.getNota(),
             "Libro actualizado exitosamente"
         );
     }

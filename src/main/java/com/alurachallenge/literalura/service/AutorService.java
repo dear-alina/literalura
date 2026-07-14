@@ -76,6 +76,7 @@ public class AutorService {
         return new LibroListResponseDTO(
             libro.getId(),
             libro.getTitulo(),
+            libro.getGutendexId(),
             libro.getAutor() != null ? libro.getAutor().getNombre() : "Desconocido",
             libro.getIdioma()
         );

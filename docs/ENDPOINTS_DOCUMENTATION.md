@@ -1,7 +1,7 @@
 # 📚 Literalura API - Documentación Oficial de Endpoints
 
-**Versión:** 1.0  
-**Última Actualización:** Junio 2026  
+**Versión:** 2.0
+**Última Actualización:** 2026-07-10
 **Base URL:** `http://localhost:8080/api`
 
 ---
@@ -10,10 +10,13 @@
 
 1. [Endpoints de Libros](#endpoints-de-libros)
    - [Crear Libro (Buscar y Registrar)](#crear-libro-buscar-y-registrar)
-   - [Buscar Libro por Título](#buscar-libro-por-título)
+   - [Buscar Libro por Título Exacto](#buscar-libro-por-título-exacto)
+   - [Búsqueda Flexible por Título o Autor](#búsqueda-flexible-por-título-o-autor)
+   - [Obtener Libro por ID](#obtener-libro-por-id)
    - [Listar Libros](#listar-libros)
    - [Filtrar Libros por Idioma](#filtrar-libros-por-idioma)
    - [Actualizar Libro](#actualizar-libro)
+   - [Actualizar Nota de Libro](#actualizar-nota-de-libro)
    - [Eliminar Libro](#eliminar-libro)
 
 2. [Endpoints de Autores](#endpoints-de-autores)
@@ -64,8 +67,9 @@ Busca un libro en la API de Gutendex por su título y lo registra automáticamen
 {
   "id": 1,
   "titulo": "1984",
+  "gutendexId": 2701,
   "autor": "George Orwell",
-  "idioma": "en",
+  "idioma": "INGLES",
   "mensaje": "Libro registrado exitosamente"
 }
 ```
@@ -75,20 +79,21 @@ Busca un libro en la API de Gutendex por su título y lo registra automáticamen
 {
   "id": 1,
   "titulo": "1984",
+  "gutendexId": 2701,
   "autor": "George Orwell",
-  "idioma": "en",
+  "idioma": "INGLES",
   "mensaje": "Libro ya existe en la base de datos"
 }
 ```
 
 ---
 
-## Buscar Libro por Título
+## Buscar Libro por Título Exacto
 
 ### `GET /api/libros/buscar`
 
-**Descripción:**  
-Busca un libro específico en la base de datos local por su título exacto. Retorna información detallada del libro incluyendo datos completos del autor.
+**Descripción:**
+Busca un libro específico en la base de datos local por su título **exacto**. Retorna información detallada del libro incluyendo datos completos del autor, idioma, nota personal y `gutendexId`.
 
 **Parámetros:**
 
@@ -114,23 +119,133 @@ GET /api/libros/buscar?titulo=1984
 {
   "id": 1,
   "titulo": "1984",
+  "gutendexId": 2701,
   "autor": {
     "id": 1,
     "nombre": "George Orwell",
     "anoNacimiento": 1903,
     "anoFallecimiento": 1950
   },
-  "idioma": "en"
+  "idioma": "INGLES",
+  "nota": "Distopía clásica imprescindible."
 }
 ```
 
 **Respuesta (404 Not Found):**
 ```json
 {
-  "timestamp": "2026-06-09T00:35:00",
+  "timestamp": "2026-07-10T10:00:00",
   "status": 404,
   "mensaje": "Libro 'NoExiste' no encontrado en la base de datos",
   "ruta": "/api/libros/buscar"
+}
+```
+
+---
+
+## Búsqueda Flexible por Título o Autor
+
+### `GET /api/libros/busqueda-flexible`
+
+**Descripción:**
+Búsqueda parcial e insensible a mayúsculas/minúsculas en el **título** del libro o en el **nombre del autor**. Ideal para inputs de búsqueda en tiempo real del frontend. Si no se envía `q` o está vacío, retorna el catálogo completo.
+
+**Parámetros:**
+
+| Parámetro | Ubicación | Tipo | Obligatorio | Descripción |
+|-----------|-----------|------|----------|-------------|
+| `q` | Query String | String | No | Término libre de búsqueda |
+
+**Ejemplos:**
+```
+GET /api/libros/busqueda-flexible?q=pride
+GET /api/libros/busqueda-flexible?q=austen
+GET /api/libros/busqueda-flexible?q=guerra
+GET /api/libros/busqueda-flexible
+```
+
+**Respuestas:**
+
+| Status | Descripción |
+|--------|-------------|
+| **200 OK** | Lista de coincidencias (puede estar vacía si no hay resultados) |
+
+**Respuesta (200 OK):**
+```json
+[
+  {
+    "id": 1,
+    "titulo": "Pride and Prejudice",
+    "gutendexId": 1342,
+    "autor": "Jane Austen",
+    "idioma": "INGLES"
+  },
+  {
+    "id": 4,
+    "titulo": "Sense and Sensibility",
+    "gutendexId": 161,
+    "autor": "Jane Austen",
+    "idioma": "INGLES"
+  }
+]
+```
+
+> `q=austen` retorna todos los libros de Jane Austen. `q=pride` retorna libros con "pride" en el título.
+
+---
+
+## Obtener Libro por ID
+
+### `GET /api/libros/{id}`
+
+**Descripción:**
+Retorna el detalle completo de un libro por su ID interno de base de datos. Incluye `gutendexId` para construir la URL de portada, nota personal y datos del autor.
+
+**Parámetros:**
+
+| Parámetro | Ubicación | Tipo | Obligatorio | Descripción |
+|-----------|-----------|------|----------|-------------|
+| `id` | Path | Long | Sí | ID interno del libro en la base de datos |
+
+**Ejemplos:**
+```
+GET /api/libros/1
+GET /api/libros/5
+```
+
+**Respuestas:**
+
+| Status | Descripción |
+|--------|-------------|
+| **200 OK** | Libro encontrado |
+| **404 Not Found** | Libro no encontrado |
+
+**Respuesta (200 OK):**
+```json
+{
+  "id": 1,
+  "titulo": "Pride and Prejudice",
+  "gutendexId": 1342,
+  "autor": {
+    "id": 5,
+    "nombre": "Jane Austen",
+    "anoNacimiento": 1775,
+    "anoFallecimiento": 1817
+  },
+  "idioma": "INGLES",
+  "nota": "Mi reseña personal del libro."
+}
+```
+
+> **URL de portada:** `https://gutenberg.org/{gutendexId}/pg{gutendexId}.cover.medium.jpg`
+
+**Respuesta (404 Not Found):**
+```json
+{
+  "timestamp": "2026-07-10T10:00:00",
+  "status": 404,
+  "mensaje": "Libro con ID 999 no encontrado",
+  "ruta": "/api/libros/999"
 }
 ```
 
@@ -173,14 +288,16 @@ GET /api/libros?page=1&size=5&sort=id&direction=desc
     {
       "id": 1,
       "titulo": "1984",
+      "gutendexId": 2701,
       "autor": "George Orwell",
-      "idioma": "en"
+      "idioma": "INGLES"
     },
     {
       "id": 2,
       "titulo": "Cien años de soledad",
+      "gutendexId": 17013,
       "autor": "Gabriel García Márquez",
-      "idioma": "es"
+      "idioma": "ESPANOL"
     }
   ],
   "pageable": {
@@ -246,14 +363,16 @@ GET /api/libros/idioma?idioma=ru
     {
       "id": 1,
       "titulo": "1984",
+      "gutendexId": 2701,
       "autor": "George Orwell",
-      "idioma": "en"
+      "idioma": "INGLES"
     },
     {
       "id": 3,
       "titulo": "The Great Gatsby",
+      "gutendexId": 64317,
       "autor": "F. Scott Fitzgerald",
-      "idioma": "en"
+      "idioma": "INGLES"
     }
   ]
 }
@@ -275,8 +394,8 @@ GET /api/libros/idioma?idioma=ru
 
 ### `PUT /api/libros/{id}`
 
-**Descripción:**  
-Actualiza la información de un libro existente. Permite actualizar título, autor e idioma de forma independiente. Solo actualiza los campos que se envíen en el body.
+**Descripción:**
+Actualiza la información de un libro existente. Permite actualizar título, autor, idioma y nota de forma independiente. Solo actualiza los campos que se envíen en el body con valor no nulo y no vacío.
 
 **Parámetros:**
 
@@ -285,14 +404,16 @@ Actualiza la información de un libro existente. Permite actualizar título, aut
 | `id` | Path | Long | Sí | ID único del libro |
 | `titulo` | Body (JSON) | String | No | Nuevo título del libro |
 | `autorNombre` | Body (JSON) | String | No | Nombre del autor (crea si no existe) |
-| `idioma` | Body (JSON) | String | No | Código ISO del idioma |
+| `idioma` | Body (JSON) | String | No | Código ISO del idioma (`en`, `es`, `pt`, `ru`) |
+| `nota` | Body (JSON) | String | No | Nota personal. Enviar `""` o `null` para borrarla |
 
 **Body (Ejemplo - Actualizar Todo):**
 ```json
 {
   "titulo": "1984 - Edición Especial",
   "autorNombre": "George Orwell",
-  "idioma": "es"
+  "idioma": "es",
+  "nota": "Obra clave del siglo XX."
 }
 ```
 
@@ -307,7 +428,6 @@ Actualiza la información de un libro existente. Permite actualizar título, aut
 ```
 PUT /api/libros/1
 PUT /api/libros/5
-PUT /api/libros/10
 ```
 
 **Respuestas:**
@@ -324,7 +444,8 @@ PUT /api/libros/10
   "id": 1,
   "titulo": "1984 - Edición Especial",
   "autor": "George Orwell",
-  "idioma": "es",
+  "idioma": "ESPANOL",
+  "nota": "Obra clave del siglo XX.",
   "mensaje": "Libro actualizado exitosamente"
 }
 ```
@@ -332,12 +453,69 @@ PUT /api/libros/10
 **Respuesta (404 Not Found):**
 ```json
 {
-  "timestamp": "2026-06-09T00:35:00",
+  "timestamp": "2026-07-10T10:00:00",
   "status": 404,
   "mensaje": "Libro con ID 999 no encontrado",
   "ruta": "/api/libros/999"
 }
 ```
+
+---
+
+## Actualizar Nota de Libro
+
+### `PATCH /api/libros/{id}/nota`
+
+**Descripción:**
+Actualización **atómica y exclusiva** de la nota/reseña personal de un libro. Opera únicamente sobre el campo `nota`, garantizando que ningún otro atributo (título, autor, idioma) sea sobreescrito. Ideal para el frontend cuando el usuario edita solo la reseña desde el modal de detalles.
+
+**Parámetros:**
+
+| Parámetro | Ubicación | Tipo | Obligatorio | Descripción |
+|-----------|-----------|------|----------|-------------|
+| `id` | Path | Long | Sí | ID único del libro |
+| `nota` | Body (JSON) | String | No | Texto de la nota. `null` borra la nota existente |
+
+**Body (Agregar o actualizar nota):**
+```json
+{
+  "nota": "Una novela imprescindible que retrata la dureza de la sociedad victoriana."
+}
+```
+
+**Body (Borrar nota):**
+```json
+{
+  "nota": null
+}
+```
+
+**Ejemplos:**
+```
+PATCH /api/libros/1/nota
+PATCH /api/libros/5/nota
+```
+
+**Respuestas:**
+
+| Status | Descripción |
+|--------|-------------|
+| **200 OK** | Nota actualizada exitosamente |
+| **404 Not Found** | Libro no encontrado |
+
+**Respuesta (200 OK):**
+```json
+{
+  "id": 1,
+  "titulo": "1984",
+  "autor": "George Orwell",
+  "idioma": "INGLES",
+  "nota": "Una novela imprescindible que retrata la dureza de la sociedad victoriana.",
+  "mensaje": "Nota actualizada exitosamente"
+}
+```
+
+**Ventaja técnica:** Mutación atómica — el frontend solo envía `nota`, sin riesgo de sobreescribir datos estructurales con modelos incompletos.
 
 ---
 
@@ -499,14 +677,16 @@ GET /api/autores/10
     {
       "id": 1,
       "titulo": "1984",
+      "gutendexId": 2701,
       "autor": "George Orwell",
-      "idioma": "en"
+      "idioma": "INGLES"
     },
     {
       "id": 2,
       "titulo": "Rebelión en la granja",
+      "gutendexId": 2996,
       "autor": "George Orwell",
-      "idioma": "en"
+      "idioma": "INGLES"
     }
   ]
 }
@@ -675,15 +855,16 @@ curl -X POST "http://localhost:8080/api/libros/buscar-y-registrar" \
 {
   "id": 1,
   "titulo": "1984",
+  "gutendexId": 2701,
   "autor": "George Orwell",
-  "idioma": "en",
+  "idioma": "INGLES",
   "mensaje": "Libro registrado exitosamente"
 }
 ```
 
 ---
 
-## 2. Buscar un Libro por Título
+## 2. Buscar un Libro por Título Exacto
 
 ```bash
 curl -X GET "http://localhost:8080/api/libros/buscar?titulo=1984"
@@ -694,14 +875,32 @@ curl -X GET "http://localhost:8080/api/libros/buscar?titulo=1984"
 {
   "id": 1,
   "titulo": "1984",
+  "gutendexId": 2701,
   "autor": {
     "id": 1,
     "nombre": "George Orwell",
     "anoNacimiento": 1903,
     "anoFallecimiento": 1950
   },
-  "idioma": "en"
+  "idioma": "INGLES",
+  "nota": null
 }
+```
+
+---
+
+## 2b. Búsqueda Flexible por Título o Autor
+
+```bash
+curl -X GET "http://localhost:8080/api/libros/busqueda-flexible?q=orwell"
+```
+
+---
+
+## 2c. Obtener Libro por ID
+
+```bash
+curl -X GET "http://localhost:8080/api/libros/1"
 ```
 
 ---
@@ -738,8 +937,19 @@ curl -X PUT "http://localhost:8080/api/libros/1" \
   -H "Content-Type: application/json" \
   -d '{
     "titulo": "1984 - Edición Especial",
-    "idioma": "es"
+    "idioma": "es",
+    "nota": "Obra clave del siglo XX."
   }'
+```
+
+---
+
+## 5b. Actualizar Solo la Nota (PATCH atómico)
+
+```bash
+curl -X PATCH "http://localhost:8080/api/libros/1/nota" \
+  -H "Content-Type: application/json" \
+  -d '{"nota": "Una lectura obligatoria."}'
 ```
 
 ---
@@ -783,29 +993,36 @@ curl -X GET "http://localhost:8080/api/autores/vivos?ano=1950"
 | # | Método | Ruta | Descripción | Status |
 |---|--------|------|-------------|--------|
 | 1 | POST | `/api/libros/buscar-y-registrar` | Crear libro desde Gutendex | 201 |
-| 2 | GET | `/api/libros/buscar` | Buscar libro por título | 200 |
-| 3 | GET | `/api/libros/idioma` | Filtrar por idioma | 200 |
-| 4 | GET | `/api/libros` | Listar libros paginado | 200 |
-| 5 | PUT | `/api/libros/{id}` | Actualizar libro | 200 |
-| 6 | DELETE | `/api/libros/{id}` | Eliminar libro | 204 |
-| 7 | GET | `/api/autores` | Listar autores paginado | 200 |
-| 8 | GET | `/api/autores/{id}` | Obtener detalle de autor | 200 |
-| 9 | GET | `/api/autores/vivos` | Autores vivos en año | 200 |
+| 2 | GET | `/api/libros/buscar` | Buscar libro por título exacto | 200 |
+| 3 | GET | `/api/libros/busqueda-flexible` | Búsqueda parcial por título o autor | 200 |
+| 4 | GET | `/api/libros/{id}` | Obtener libro por ID | 200 |
+| 5 | GET | `/api/libros/idioma` | Filtrar por idioma | 200 |
+| 6 | GET | `/api/libros` | Listar libros paginado | 200 |
+| 7 | PUT | `/api/libros/{id}` | Actualizar libro completo | 200 |
+| 8 | PATCH | `/api/libros/{id}/nota` | Actualizar solo la nota | 200 |
+| 9 | DELETE | `/api/libros/{id}` | Eliminar libro | 204 |
+| 10 | GET | `/api/autores` | Listar autores paginado | 200 |
+| 11 | GET | `/api/autores/{id}` | Obtener detalle de autor con libros | 200 |
+| 12 | GET | `/api/autores/vivos` | Autores vivos en año específico | 200 |
 
-**Total: 9 Endpoints**
+**Total: 12 Endpoints**
 
 ---
 
-# 🔐 Notas de Seguridad
+# 🔐 Notas de Seguridad y Arquitectura
 
 - Todos los endpoints validan entrada del usuario
-- Se implementó manejo global de excepciones
-- Las búsquedas no distinguen mayúsculas/minúsculas en algunos casos
+- Se implementó manejo global de excepciones (`@ControllerAdvice`)
+- La búsqueda flexible (`busqueda-flexible`) es case-insensitive y parcial
+- La búsqueda por título (`buscar`) es **exacta** — el título debe coincidir tal como está en BD
 - IDs deben ser números positivos enteros
 - Años deben ser números válidos positivos
+- `gutendexId` está presente en todos los DTOs de respuesta de libros — usar para construir URL de portada: `https://gutenberg.org/{gutendexId}/pg{gutendexId}.cover.medium.jpg`
+- Idiomas soportados: `en` (Inglés), `es` (Español), `pt` (Portugués), `ru` (Ruso)
+- El campo `nota` en respuestas puede ser `null` si el usuario no ha añadido reseña
 
 ---
 
-**Versión:** 1.0  
-**Fecha:** Junio 2026  
+**Versión:** 2.0
+**Fecha:** 2026-07-10
 **Mantenedor:** Equipo Literalura

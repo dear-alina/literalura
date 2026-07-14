@@ -5,8 +5,10 @@ import com.alurachallenge.literalura.model.Idioma;
 public record LibroDetalleResponseDTO(
     Long id,
     String titulo,
+    Integer gutendexId,
     AutorDetalleDTO autor,
-    Idioma idioma
+    Idioma idioma,
+    String nota
 ) {
     public record AutorDetalleDTO(
         Long id,

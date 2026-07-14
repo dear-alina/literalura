@@ -8,12 +8,19 @@ public class Libro {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long Id;
+
+    @Column(name = "gutendex_id", unique = true, nullable = false)
+    private Integer gutendexId;
+
     @Column(unique = true)
     private String titulo;
     @ManyToOne(fetch = FetchType.EAGER)
     private Autor autor;
     @Enumerated(EnumType.STRING)
     private Idioma idioma;
+
+    @Column(length = 1000)
+    private String nota;
 
     //Constructor
     public Libro() {}
@@ -33,6 +40,15 @@ public class Libro {
             this.idioma = null;
         }
     }
+
+    public Integer getGutendexId() {
+        return gutendexId;
+    }
+
+    public void setGutendexId(Integer gutendexId) {
+        this.gutendexId = gutendexId;
+    }
+
     public Long getId() {
         return Id;
     }
@@ -63,6 +79,14 @@ public class Libro {
 
     public void setIdioma(Idioma idioma) {
         this.idioma = idioma;
+    }
+
+    public String getNota() {
+        return nota;
+    }
+
+    public void setNota(String nota) {
+        this.nota = nota;
     }
 
     @Override

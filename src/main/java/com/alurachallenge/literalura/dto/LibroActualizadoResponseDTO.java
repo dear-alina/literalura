@@ -7,5 +7,6 @@ public record LibroActualizadoResponseDTO(
     String titulo,
     String autor,
     Idioma idioma,
+    String nota,
     String mensaje
 ) {}

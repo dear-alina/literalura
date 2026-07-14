@@ -5,5 +5,6 @@ import com.alurachallenge.literalura.model.Idioma;
 public record ActualizarLibroDTO(
     String titulo,
     String autorNombre,
-    String idioma
+    String idioma,
+    String nota
 ) {}
