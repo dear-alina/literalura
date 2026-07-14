@@ -39,4 +39,4 @@ ENV JAVA_OPTS="-Xms256m -Xmx512m"
 EXPOSE 8080
 
 # Usamos sh -c para que evalúe la variable de entorno JAVA_OPTS correctamente
-ENTRYPOINT exec java $JAVA_OPTS -jar app.jar
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]
