@@ -18,7 +18,8 @@ import com.alurachallenge.literalura.model.Idioma;
 import com.alurachallenge.literalura.model.Libro;
 import com.alurachallenge.literalura.repository.AutorRepository;
 import com.alurachallenge.literalura.repository.LibroRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -31,15 +32,20 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class LibroService {
-    
-    @Autowired
-    private LibroRepository libroRepository;
-    
-    @Autowired
-    private AutorRepository autorRepository;
-    
-    @Autowired
-    private ClienteGutendex clienteGutendex;
+
+    private static final Logger log = LoggerFactory.getLogger(LibroService.class);
+
+    private final LibroRepository libroRepository;
+    private final AutorRepository autorRepository;
+    private final ClienteGutendex clienteGutendex;
+
+    public LibroService(LibroRepository libroRepository,
+                        AutorRepository autorRepository,
+                        ClienteGutendex clienteGutendex) {
+        this.libroRepository = libroRepository;
+        this.autorRepository = autorRepository;
+        this.clienteGutendex = clienteGutendex;
+    }
     
     public LibroResponseDTO buscarYRegistrarLibro(BusquedaLibroDTO busqueda) {
         // Buscar en Gutendex primero para obtener el gutendexId real
@@ -49,9 +55,7 @@ public class LibroService {
             throw new LibroNoEncontradoException("Libro no encontrado en Gutendex: " + busqueda.titulo());
         }
 
-        DatosGutendexLibro datosGutendex = respuesta.resultados().get(0);
-
-        // Deduplicar por gutendexId (más fiable que por título)
+        DatosGutendexLibro datosGutendex = respuesta.resultados().getFirst();
         if (datosGutendex.id() != null) {
             Optional<Libro> libroExistente = libroRepository.findByGutendexId(datosGutendex.id().intValue());
             if (libroExistente.isPresent()) {
@@ -96,7 +100,7 @@ public class LibroService {
             return null;
         }
         
-        DatosGutendexAutor datosAutor = autores.get(0);
+        DatosGutendexAutor datosAutor = autores.getFirst();
         
         // Buscar autor por nombre, si no existe crearlo
         Optional<Autor> autorExistente = autorRepository.findByNombre(datosAutor.nombre());
@@ -118,19 +122,60 @@ public class LibroService {
         }
         
         try {
-            return Idioma.fromString(idiomas.get(0));
+            return Idioma.fromString(idiomas.getFirst());
         } catch (Exception e) {
+            log.warn("Código de idioma no reconocido '{}', se guardará como null", idiomas.getFirst());
             return null;
         }
     }
     
     public List<LibroListResponseDTO> buscarFlexible(String q) {
         String termino = (q == null) ? "" : q.trim();
-        return libroRepository
-                .findByTituloContainingIgnoreCaseOrAutorNombreContainingIgnoreCase(termino, termino)
-                .stream()
-                .map(this::convertirAListDTO)
-                .collect(Collectors.toList());
+
+        List<Libro> resultadosLocales = libroRepository
+                .findByTituloContainingIgnoreCaseOrAutorNombreContainingIgnoreCase(termino, termino);
+
+        if (!resultadosLocales.isEmpty() || termino.isEmpty()) {
+            return resultadosLocales.stream()
+                    .map(this::convertirAListDTO)
+                    .collect(Collectors.toList());
+        }
+
+        // BD vacía para ese término y q no está vacío → consultar Gutendex
+        try {
+            RespuestaGutendex respuesta = clienteGutendex.buscarLibrosPorTitulo(termino);
+
+            if (respuesta == null || respuesta.resultados() == null || respuesta.resultados().isEmpty()) {
+                return List.of();
+            }
+
+            DatosGutendexLibro datos = respuesta.resultados().getFirst();
+
+            // Deduplicar por gutendexId antes de persistir
+            if (datos.id() != null) {
+                Optional<Libro> existente = libroRepository.findByGutendexId(datos.id().intValue());
+                if (existente.isPresent()) {
+                    return List.of(convertirAListDTO(existente.get()));
+                }
+            }
+
+            Autor autor = obtenerOCrearAutor(datos.autores());
+
+            Libro nuevoLibro = new Libro();
+            nuevoLibro.setTitulo(datos.titulo());
+            nuevoLibro.setAutor(autor);
+            nuevoLibro.setIdioma(mapearIdioma(datos.idiomas()));
+            if (datos.id() != null) {
+                nuevoLibro.setGutendexId(datos.id().intValue());
+            }
+
+            Libro guardado = libroRepository.save(nuevoLibro);
+            return List.of(convertirAListDTO(guardado));
+
+        } catch (Exception e) {
+            log.warn("Fallo al consultar Gutendex para '{}': {}", termino, e.getMessage());
+            return List.of();
+        }
     }
 
     public LibroDetalleResponseDTO buscarLibroPorId(Long id) {
@@ -141,7 +186,6 @@ public class LibroService {
         return convertirADetalleDTO(libro);
     }
 
-    @Transactional
     public LibroDetalleResponseDTO buscarLibroPorTitulo(String titulo) {
         // Paso 1 & 2: Buscar en BD local primero (case-insensitive)
         Optional<Libro> libroLocal = libroRepository.findByTituloIgnoreCase(titulo);
@@ -160,7 +204,7 @@ public class LibroService {
         }
 
         // Paso 4: Hit externo → deduplicar por gutendexId y persistir
-        DatosGutendexLibro datosGutendex = respuesta.resultados().get(0);
+        DatosGutendexLibro datosGutendex = respuesta.resultados().getFirst();
 
         if (datosGutendex.id() != null) {
             Optional<Libro> porGutendexId = libroRepository.findByGutendexId(datosGutendex.id().intValue());
@@ -241,7 +285,6 @@ public class LibroService {
         }
     }
     
-    @Transactional
     public LibroActualizadoResponseDTO actualizarNotaLibro(Long id, ActualizarNotaDTO actualizacion) {
         Libro libro = libroRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException(
@@ -317,11 +360,11 @@ public class LibroService {
     }
     
     public void eliminarLibro(Long id) {
-        Libro libro = libroRepository.findById(id)
+        libroRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException(
                 "Libro con ID " + id + " no encontrado"
             ));
-        
+
         libroRepository.deleteById(id);
     }
 }

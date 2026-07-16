@@ -3,10 +3,12 @@ package com.alurachallenge.literalura.service;
 import com.alurachallenge.literalura.dto.AutorResponseDTO;
 import com.alurachallenge.literalura.dto.AutorDetalleResponseDTO;
 import com.alurachallenge.literalura.dto.LibroListResponseDTO;
+import com.alurachallenge.literalura.exception.ResourceNotFoundException;
 import com.alurachallenge.literalura.model.Autor;
 import com.alurachallenge.literalura.model.Libro;
 import com.alurachallenge.literalura.repository.AutorRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -18,9 +20,14 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(readOnly = true)
 public class AutorService {
-    
-    @Autowired
-    private AutorRepository autorRepository;
+
+    private static final Logger log = LoggerFactory.getLogger(AutorService.class);
+
+    private final AutorRepository autorRepository;
+
+    public AutorService(AutorRepository autorRepository) {
+        this.autorRepository = autorRepository;
+    }
     
     public Page<AutorResponseDTO> listarTodosLosAutores(Pageable pageable) {
         return autorRepository.findAll(pageable)
@@ -29,7 +36,7 @@ public class AutorService {
     
     public AutorDetalleResponseDTO obtenerAutorDetalle(Long id) {
         Autor autor = autorRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Autor no encontrado"));
+            .orElseThrow(() -> new ResourceNotFoundException("Autor con ID " + id + " no encontrado"));
         return convertirADetalleDTO(autor);
     }
     
