@@ -16,7 +16,6 @@ public interface LibroRepository extends JpaRepository<Libro, Long> {
     Optional<Libro> findByTituloIgnoreCase(String titulo);
     List<Libro> findByIdioma(Idioma idioma);
     Page<Libro> findAll(Pageable pageable);
-
     List<Libro> findByTituloContainingIgnoreCaseOrAutorNombreContainingIgnoreCase(
             String titulo, String autorNombre);
 }
