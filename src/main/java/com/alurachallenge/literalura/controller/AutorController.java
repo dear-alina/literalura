@@ -20,35 +20,29 @@ public class AutorController {
     @Autowired
     private AutorService autorService;
     
-    // ── 2. GET con rutas nombradas explícitas ────────────────────────────────
-
-    @GetMapping("/vivos")
-    public ResponseEntity<List<AutorResponseDTO>> obtenerAutoresVivos(
-            @RequestParam Integer ano) {
-        List<AutorResponseDTO> autores = autorService.obtenerAutoresVivosEnAno(ano);
-        return ResponseEntity.ok(autores);
-    }
-
-    // ── 3. GET sin parámetros de ruta (paginado) ─────────────────────────────
-
     @GetMapping
     public ResponseEntity<Page<AutorResponseDTO>> listarAutores(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "nombre") String sort,
             @RequestParam(defaultValue = "asc") String direction) {
-
-        Sort.Direction sortDir = direction.equalsIgnoreCase("desc") ?
+        
+        Sort.Direction sortDir = direction.equalsIgnoreCase("desc") ? 
             Sort.Direction.DESC : Sort.Direction.ASC;
-
+        
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDir, sort));
         Page<AutorResponseDTO> autores = autorService.listarTodosLosAutores(pageable);
-
+        
         return ResponseEntity.ok(autores);
     }
-
-    // ── 4. GET con /{id} ─────────────────────────────────────────────────────
-
+    
+    @GetMapping("/vivos")
+    public ResponseEntity<List<AutorResponseDTO>> obtenerAutoresVivos(
+            @RequestParam Integer ano) {
+        List<AutorResponseDTO> autores = autorService.obtenerAutoresVivosEnAno(ano);
+        return ResponseEntity.ok(autores);
+    }
+    
     @GetMapping("/{id}")
     public ResponseEntity<AutorDetalleResponseDTO> obtenerDetalleAutor(@PathVariable Long id) {
         AutorDetalleResponseDTO autor = autorService.obtenerAutorDetalle(id);
