@@ -28,19 +28,16 @@ public class LibroController {
     @Autowired
     private LibroService libroService;
     
+    // ── 1. POST ──────────────────────────────────────────────────────────────
+
     @PostMapping("/buscar-y-registrar")
     public ResponseEntity<LibroResponseDTO> buscarYRegistrar(
             @Valid @RequestBody BusquedaLibroDTO busqueda) {
         LibroResponseDTO respuesta = libroService.buscarYRegistrarLibro(busqueda);
         return ResponseEntity.status(HttpStatus.CREATED).body(respuesta);
     }
-    
-    @GetMapping("/busqueda-flexible")
-    public ResponseEntity<List<LibroListResponseDTO>> busquedaFlexible(
-            @RequestParam(required = false) String q) {
-        List<LibroListResponseDTO> resultado = libroService.buscarFlexible(q);
-        return ResponseEntity.ok(resultado);
-    }
+
+    // ── 2. GET con rutas nombradas explícitas ────────────────────────────────
 
     @GetMapping("/buscar")
     public ResponseEntity<LibroDetalleResponseDTO> buscarPorTitulo(
@@ -49,15 +46,40 @@ public class LibroController {
         return ResponseEntity.ok(respuesta);
     }
 
-    @GetMapping("/idioma")
+    @GetMapping("/busqueda-flexible")
+    public ResponseEntity<List<LibroListResponseDTO>> busquedaFlexible(
+            @RequestParam(required = false) String q) {
+        List<LibroListResponseDTO> resultado = libroService.buscarFlexible(q);
+        return ResponseEntity.ok(resultado);
+    }
 
+    @GetMapping("/idioma")
     public ResponseEntity<LibrosPorIdiomaResponseDTO> obtenerLibrosPorIdioma(
             @RequestParam String idioma) {
         LibrosPorIdiomaResponseDTO respuesta = libroService.obtenerLibrosPorIdioma(idioma);
         return ResponseEntity.ok(respuesta);
-
     }
-    
+
+    // ── 3. GET sin parámetros de ruta (paginado) ─────────────────────────────
+
+    @GetMapping
+    public ResponseEntity<Page<LibroListResponseDTO>> listarLibros(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "titulo") String sort,
+            @RequestParam(defaultValue = "asc") String direction) {
+
+        Sort.Direction sortDir = direction.equalsIgnoreCase("desc") ?
+            Sort.Direction.DESC : Sort.Direction.ASC;
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDir, sort));
+        Page<LibroListResponseDTO> libros = libroService.listarTodosLosLibros(pageable);
+
+        return ResponseEntity.ok(libros);
+    }
+
+    // ── 4. GET / PATCH / PUT / DELETE con /{id} ──────────────────────────────
+
     @GetMapping("/{id}")
     public ResponseEntity<LibroDetalleResponseDTO> obtenerLibroPorId(@PathVariable Long id) {
         LibroDetalleResponseDTO respuesta = libroService.buscarLibroPorId(id);
@@ -79,26 +101,10 @@ public class LibroController {
         LibroActualizadoResponseDTO respuesta = libroService.actualizarLibro(id, actualizacion);
         return ResponseEntity.ok(respuesta);
     }
-    
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarLibro(@PathVariable Long id) {
         libroService.eliminarLibro(id);
         return ResponseEntity.noContent().build();
-    }
-    
-    @GetMapping
-    public ResponseEntity<Page<LibroListResponseDTO>> listarLibros(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "titulo") String sort,
-            @RequestParam(defaultValue = "asc") String direction) {
-        
-        Sort.Direction sortDir = direction.equalsIgnoreCase("desc") ? 
-            Sort.Direction.DESC : Sort.Direction.ASC;
-        
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDir, sort));
-        Page<LibroListResponseDTO> libros = libroService.listarTodosLosLibros(pageable);
-        
-        return ResponseEntity.ok(libros);
     }
 }
