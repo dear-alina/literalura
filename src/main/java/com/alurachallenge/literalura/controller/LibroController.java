@@ -10,7 +10,6 @@ import com.alurachallenge.literalura.dto.ActualizarNotaDTO;
 import com.alurachallenge.literalura.dto.LibroActualizadoResponseDTO;
 import com.alurachallenge.literalura.service.LibroService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,9 +23,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/libros")
 public class LibroController {
-    
-    @Autowired
-    private LibroService libroService;
+
+    private final LibroService libroService;
+
+    public LibroController(LibroService libroService) {
+        this.libroService = libroService;
+    }
     
     // ── 1. POST ──────────────────────────────────────────────────────────────
 

@@ -3,7 +3,6 @@ package com.alurachallenge.literalura.controller;
 import com.alurachallenge.literalura.dto.AutorResponseDTO;
 import com.alurachallenge.literalura.dto.AutorDetalleResponseDTO;
 import com.alurachallenge.literalura.service.AutorService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -16,9 +15,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/autores")
 public class AutorController {
-    
-    @Autowired
-    private AutorService autorService;
+
+    private final AutorService autorService;
+
+    public AutorController(AutorService autorService) {
+        this.autorService = autorService;
+    }
     
     // ── 2. GET con rutas nombradas explícitas ────────────────────────────────
 
