@@ -1,7 +1,7 @@
 # Historial de Cambios - Literalura v2.0
 
-**Última actualización:** 2026-07-10
-**Total de cambios documentados:** 7
+**Última actualización:** 2026-07-17
+**Total de cambios documentados:** 14
 
 ---
 
@@ -16,6 +16,11 @@
 | 2026-07-08 | Nuevo endpoint `PATCH /api/libros/{id}/nota` para mutación atómica del campo nota. Nuevo DTO `ActualizarNotaDTO`. Campo `nota` agregado a `Libro`, DTOs de respuesta y lógica de actualización en `LibroService` | Feature | — |
 | 2026-07-09 | Resolución de proxies LAZY en `AutorRepository` con `@EntityGraph(attributePaths = {"libros"})` en métodos de lectura del catálogo. Migración de `Autor.libros` de `FetchType.EAGER` a `LAZY`. `findByNombre` conserva LAZY puro para escrituras internas | JPA Optimization | [Ver](./REFACTORING_LOGS/2026-07-10-backend-refactor-libros-autores.md) |
 | 2026-07-10 | Implementación completa del campo `gutendexId` en entidad `Libro` (`@Column unique + not null`). Nuevos endpoints `GET /api/libros/{id}` y `GET /api/libros/busqueda-flexible`. Deduplicación migrada de título a `gutendexId`. Campo `gutendexId` expuesto en todos los DTOs de respuesta de libros | Feature | [Ver](./REFACTORING_LOGS/2026-07-10-backend-refactor-libros-autores.md) |
+| 2026-07-13 | Ampliación de cobertura de tests unitarios puros (Mockito/JUnit 5) para servicios, controladores, modelos y excepciones | Tests | [Ver](./REFACTORING_LOGS/2026-07-13-unit-tests-coverage-boost.md) |
+| 2026-07-13 | Ampliación de cobertura de tests de integración (`@WebMvcTest` + MockMvc) | Tests | [Ver](./REFACTORING_LOGS/2026-07-13-integration-tests-coverage-boost.md) |
+| 2026-07-13 | Infraestructura E2E: `BaseE2ETest` con Testcontainers (PostgreSQL) + REST Assured, suites `AutorControllerE2ETest` y `LibroControllerE2ETest` | Tests | [Ver](./REFACTORING_LOGS/2026-07-13-backend-e2e-testcontainers-log.md) |
+| 2026-07-14 | Búsqueda unificada `GET /api/libros/buscar`: BD local → Gutendex → persistencia con deduplicación. Manejo de errores centralizado en `GlobalExceptionHandler` (`LibroNoEncontradoException` → 404) | Refactor | [Ver](./REFACTORING_LOGS/2026-07-14-unified-search-refactor.md) |
+| 2026-07-17 | Fix definitivo E2E: actualización a REST Assured 6.0.0 (incompatibilidad Groovy 5 de Spring Boot 4). Migración a Testcontainers 2.0.3 (artefactos renombrados). Saneamiento de versiones del pom (jackson-databind, mockito, testcontainers gestionadas por BOM). Reparación de 8 tests desactualizados + 4 tests nuevos, todos con patrón AAA. Suite completa: 128/128 en verde | Fix / Tests | [Ver](./REFACTORING_LOGS/2026-07-17-e2e-fix-restassured6-testcontainers2.md) |
 
 ---
 

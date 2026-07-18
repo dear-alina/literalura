@@ -76,8 +76,9 @@ void patchNota_deberiaActualizarNotaYRetornar200() {
 ```
 
 ## 5. Ajuste correctivo aplicado durante ejecución
-Se corrigió un fallo de `NullPointerException` en `io.restassured.internal.RequestSpecificationImpl.applyProxySettings` causado por estado/proxy incompleto heredado por RestAssured.
-La mitigación se aplicó en `BaseE2ETest` con `RestAssured.reset()` y limpieza explícita de propiedades de proxy en cada `@BeforeEach`, evitando contaminación entre suites.
+Se intentó mitigar un fallo de `NullPointerException` en `io.restassured.internal.RequestSpecificationImpl.applyProxySettings` con `RestAssured.reset()` y limpieza explícita de propiedades de proxy en cada `@BeforeEach`.
+
+> **⚠️ Corrección (2026-07-17):** El diagnóstico anterior era incorrecto. La causa real del NPE no era estado de proxy residual, sino una **incompatibilidad binaria entre REST Assured 5.x (compilado contra Groovy 4) y Groovy 5**, que Spring Boot 4 gestiona por defecto. La limpieza de propiedades de proxy nunca tuvo efecto y fue retirada de `BaseE2ETest`. La solución definitiva fue actualizar a **REST Assured 6.0.0** (con soporte oficial de Groovy 5). Ver `2026-07-17-e2e-fix-restassured6-testcontainers2.md`.
 
 ## 6. Refactor de aislamiento por clase (sin duplicaciones)
 - Se eliminó la configuración global mutable de RestAssured (`baseURI`/`port`) como estado compartido.

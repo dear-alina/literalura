@@ -3,6 +3,7 @@ package com.alurachallenge.literalura.service;
 import com.alurachallenge.literalura.dto.AutorDetalleResponseDTO;
 import com.alurachallenge.literalura.dto.AutorResponseDTO;
 import com.alurachallenge.literalura.dto.LibroListResponseDTO;
+import com.alurachallenge.literalura.exception.ResourceNotFoundException;
 import com.alurachallenge.literalura.model.Autor;
 import com.alurachallenge.literalura.model.Idioma;
 import com.alurachallenge.literalura.model.Libro;
@@ -16,7 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -34,7 +35,7 @@ class AutorServiceIT {
 
     @Container
     @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16-alpine");
 
     @Autowired
     private AutorService autorService;
@@ -131,10 +132,11 @@ class AutorServiceIT {
     }
 
     @Test
-    void obtenerAutorDetalle_autorInexistente_deberiaLanzarExcepcion() {
+    void obtenerAutorDetalle_autorInexistente_deberiaLanzarResourceNotFoundException() {
+        // Act & Assert (sin arrange: la BD del contenedor no tiene el autor 999)
         assertThatThrownBy(() -> autorService.obtenerAutorDetalle(999L))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Autor no encontrado");
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Autor con ID 999 no encontrado");
     }
 
     // --- Tests de obtenerAutoresVivosEnAno ---

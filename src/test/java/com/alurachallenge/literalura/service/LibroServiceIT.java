@@ -1,6 +1,7 @@
 package com.alurachallenge.literalura.service;
 
 import com.alurachallenge.literalura.dto.*;
+import com.alurachallenge.literalura.exception.LibroNoEncontradoException;
 import com.alurachallenge.literalura.model.Autor;
 import com.alurachallenge.literalura.model.Idioma;
 import com.alurachallenge.literalura.model.Libro;
@@ -14,7 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -34,7 +35,7 @@ class LibroServiceIT {
 
     @Container
     @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16-alpine");
 
     @Autowired
     private LibroService libroService;
@@ -142,9 +143,14 @@ class LibroServiceIT {
     }
 
     @Test
-    void buscarLibroPorTitulo_libroInexistente_deberiaLanzarResourceNotFoundException() {
+    void buscarLibroPorTitulo_libroInexistente_deberiaLanzarLibroNoEncontradoException() {
+        // Arrange: sin datos en BD y el mock de ClienteGutendex responde null (miss completo)
+        when(clienteGutendex.buscarLibrosPorTitulo("Titulo No Existe")).thenReturn(null);
+
+        // Act & Assert
         assertThatThrownBy(() -> libroService.buscarLibroPorTitulo("Titulo No Existe"))
-                .hasMessageContaining("no encontrado en la base de datos");
+                .isInstanceOf(LibroNoEncontradoException.class)
+                .hasMessageContaining("no encontrado ni en la base de datos local ni en Gutendex");
     }
 
     // --- Tests de listarTodosLosLibros ---

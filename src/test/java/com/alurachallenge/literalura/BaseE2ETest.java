@@ -9,7 +9,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -19,7 +19,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 public abstract class BaseE2ETest {
 
     @Container
-    private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:15-alpine")
+    private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:15-alpine")
             .withDatabaseName("literalura_e2e")
             .withUsername("literalura")
             .withPassword("literalura");
@@ -36,17 +36,8 @@ public abstract class BaseE2ETest {
 
     @BeforeEach
     void configureRestAssured() {
-        // Evita que RestAssured herede estado estático/proxy de otras suites
+        // Evita que RestAssured herede configuración estática de otras suites
         RestAssured.reset();
-        // Fuerza a RestAssured a no usar configuración de proxy residual
-        RestAssured.proxy = null;
-        // Mitiga NPE en applyProxySettings cuando existe configuración de proxy incompleta
-        System.clearProperty("http.proxyHost");
-        System.clearProperty("http.proxyPort");
-        System.clearProperty("https.proxyHost");
-        System.clearProperty("https.proxyPort");
-        System.clearProperty("socksProxyHost");
-        System.clearProperty("socksProxyPort");
     }
 
     protected RequestSpecification requestSpec() {

@@ -29,19 +29,27 @@ El programa ofrece un menú interactivo con varias opciones para buscar, listar 
 
 ## 🛠️ Tecnologías utilizadas
 
-- **Java 17** (o superior)
-- **Spring Boot 3.x**
+- **Java 21**
+- **Spring Boot 4.x**
 - **Spring Data JPA**
 - **PostgreSQL** (base de datos relacional)
 - **Jackson** (para procesamiento JSON)
 - **Maven** (gestión de dependencias)
 
+### Stack de pruebas
+
+- **JUnit 5 + Mockito + AssertJ** (tests unitarios, patrón AAA)
+- **MockMvc / @WebMvcTest** (tests de contrato HTTP)
+- **Testcontainers 2 (PostgreSQL)** (tests de integración con base de datos real)
+- **REST Assured 6** (tests E2E sobre la aplicación completa)
+
 ---
 
 ## 📋 Requisitos previos
 
-- Tener instalado **Java 17+** y **Maven**.
+- Tener instalado **Java 21+** y **Maven** (o usar el wrapper `./mvnw`).
 - Tener una instancia de **PostgreSQL** en ejecución.
+- **Docker** en ejecución para los tests de integración y E2E (Testcontainers).
 - Conocimientos básicos para modificar el archivo `application.properties` con tus credenciales de base de datos.
 
 ---
