@@ -14,8 +14,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
+// Test de contexto puro: se excluye la capa de persistencia (los repositorios
+// están mockeados) para no depender de una base de datos real ni de las
+// variables de entorno DB_HOST/DB_USER/DB_PASSWORD que usa el despliegue.
 @SpringBootTest(properties = {
-        "app.interactive=false"
+        "app.interactive=false",
+        "spring.autoconfigure.exclude=" +
+                "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration," +
+                "org.springframework.boot.jdbc.autoconfigure.DataSourceInitializationAutoConfiguration," +
+                "org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration," +
+                "org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration," +
+                "org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration"
 })
 class LiteraluraApplicationTests {
 
