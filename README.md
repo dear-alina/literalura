@@ -1,14 +1,15 @@
 # 📚 Literalura - Catálogo de Libros
 
-Literalura es una aplicación web desarrollada con **Spring Boot** que permite consultar libros desde la API pública [Gutendex](https://gutendex.com/), almacenarlos en una base de datos PostgreSQL y gestionar información sobre autores. 
-El programa ofrece un menú interactivo con varias opciones para buscar, listar y filtrar libros y autores.
+Literalura es el **backend REST** de una plataforma web de gestión bibliográfica: expone doce endpoints (Spring Boot 4, Java 21), persiste libros y autores en PostgreSQL y sirve al frontend [`stitch_literalura`](https://github.com/dear-alina/literalura-frontend). El catálogo proviene de la API pública [Gutendex](https://gutendex.com/) (Project Gutenberg).
+
+> **Integración con Gutendex desde el navegador (importante):** la consulta a Gutendex la realiza el **cliente (navegador)**, no el backend. Cloudflare bloquea con HTTP 403 ("managed challenge") las peticiones desde la IP de datacenter de Render; el navegador, con IP residencial y CORS permitido por Gutendex (`access-control-allow-origin: *`), sí las resuelve. El endpoint `POST /api/libros/buscar-y-registrar` recibe el libro **ya obtenido** por el navegador y solo lo deduplica por `gutendexId` y lo persiste.
 
 ---
 
 ## ✨ Funcionalidades
 
-1. **Buscar libro por título en la API y registrarlo**  
-   - Consulta la API de Gutendex, toma el primer resultado que coincida y lo guarda en la base de datos junto con su autor (si el autor no existe previamente, se crea automáticamente).
+1. **Registrar un libro obtenido de Gutendex**  
+   - El navegador busca en Gutendex y envía el primer resultado; el backend deduplica por `gutendexId` y lo guarda junto con su autor (si el autor no existe previamente, se crea automáticamente).
 
 2. **Buscar libro en la base de datos por título**  
    - Permite buscar un libro ya registrado utilizando su título exacto (sin distinguir mayúsculas).
