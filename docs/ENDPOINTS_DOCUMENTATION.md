@@ -37,18 +37,26 @@
 ### `POST /api/libros/buscar-y-registrar`
 
 **Descripción:**  
-Busca un libro en la API de Gutendex por su título y lo registra automáticamente en la base de datos. Si el libro ya existe en la BD, retorna sus datos con un mensaje indicando que ya estaba registrado.
+Registra en la base de datos un libro **ya obtenido de Gutendex por el navegador**. El backend no consulta Gutendex en este flujo: Cloudflare bloquea (HTTP 403, "managed challenge") las peticiones desde la IP de datacenter de Render, por lo que la búsqueda la realiza el cliente (con IP residencial) y aquí solo se deduplica por `gutendexId` y se persiste. Si el libro ya existe, retorna sus datos con un mensaje indicando que ya estaba registrado.
 
-**Parámetros:**
+**Parámetros (Body JSON — `RegistrarLibroDTO`):**
 
-| Parámetro | Ubicación | Tipo | Obligatorio | Descripción |
-|-----------|-----------|------|----------|-------------|
-| `titulo` | Body (JSON) | String | Sí | Título del libro a buscar |
+| Parámetro | Tipo | Obligatorio | Descripción |
+|-----------|------|----------|-------------|
+| `gutendexId` | Number | Sí | ID canónico del libro en Gutendex (clave de deduplicación) |
+| `titulo` | String | Sí | Título del libro |
+| `autores` | Array | No | Lista de autores `{nombre, anoNacimiento, anoFallecimiento}` (se usa el primero) |
+| `idiomas` | Array&lt;String&gt; | No | Códigos de idioma (se usa el primero: es, en, pt, ru) |
+| `descargas` | Number | No | Número de descargas informado por Gutendex |
 
 **Body (Ejemplo):**
 ```json
 {
-  "titulo": "1984"
+  "gutendexId": 2701,
+  "titulo": "1984",
+  "autores": [{ "nombre": "George Orwell", "anoNacimiento": 1903, "anoFallecimiento": 1950 }],
+  "idiomas": ["en"],
+  "descargas": 5000
 }
 ```
 
@@ -57,10 +65,11 @@ Busca un libro en la API de Gutendex por su título y lo registra automáticamen
 | Status | Descripción | Ejemplo |
 |--------|-------------|---------|
 | **201 Created** | Libro registrado exitosamente | Ver ejemplo abajo |
-| **201 Created** | Libro ya existe en BD | Ver ejemplo abajo |
-| **404 Not Found** | Libro no encontrado en Gutendex | `{"id": null, "titulo": null, "autor": null, "idioma": null, "mensaje": "Libro no encontrado en Gutendex"}` |
-| **400 Bad Request** | Validación fallida (título vacío) | Error de validación |
-| **500 Internal Server Error** | Error en servidor | `{"mensaje": "Error interno del servidor"}` |
+| **201 Created** | Libro ya existe en BD (deduplicado por `gutendexId`) | Ver ejemplo abajo |
+| **400 Bad Request** | Validación fallida (falta `gutendexId` o `titulo`) | `{"status": 400, "mensaje": "Validación fallida"}` |
+| **500 Internal Server Error** | Error en servidor | `{"status": 500, "mensaje": "..."}` |
+
+> Nota: el caso "libro no encontrado en Gutendex" ya no lo produce este endpoint; lo detecta el navegador antes de llamar al backend (ver `stitch_literalura`, vista de búsqueda global).
 
 **Respuesta (Nuevo Libro - 201):**
 ```json
@@ -798,7 +807,10 @@ Se envían en el cuerpo JSON:
 ```
 POST /api/libros/buscar-y-registrar
 {
-  "titulo": "1984"                          ← En el body
+  "gutendexId": 2701,                       ← libro ya obtenido de Gutendex por el navegador
+  "titulo": "1984",
+  "autores": [{ "nombre": "George Orwell", "anoNacimiento": 1903, "anoFallecimiento": 1950 }],
+  "idiomas": ["en"]
 }
 ```
 
@@ -845,9 +857,10 @@ POST /api/libros/buscar-y-registrar
 ## 1. Crear un Nuevo Libro
 
 ```bash
+# El navegador ya obtuvo el libro de Gutendex y envía sus datos:
 curl -X POST "http://localhost:8080/api/libros/buscar-y-registrar" \
   -H "Content-Type: application/json" \
-  -d '{"titulo": "1984"}'
+  -d '{"gutendexId": 2701, "titulo": "1984", "autores": [{"nombre": "George Orwell", "anoNacimiento": 1903, "anoFallecimiento": 1950}], "idiomas": ["en"]}'
 ```
 
 **Respuesta:**
