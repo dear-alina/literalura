@@ -1,6 +1,6 @@
 package com.alurachallenge.literalura.service;
 
-import com.alurachallenge.literalura.dto.BusquedaLibroDTO;
+import com.alurachallenge.literalura.dto.RegistrarLibroDTO;
 import com.alurachallenge.literalura.dto.DatosGutendexAutor;
 import com.alurachallenge.literalura.dto.DatosGutendexLibro;
 import com.alurachallenge.literalura.dto.LibroResponseDTO;
@@ -47,41 +47,37 @@ public class LibroService {
         this.clienteGutendex = clienteGutendex;
     }
     
-    public LibroResponseDTO buscarYRegistrarLibro(BusquedaLibroDTO busqueda) {
-        // Buscar en Gutendex primero para obtener el gutendexId real
-        RespuestaGutendex respuesta = clienteGutendex.buscarLibrosPorTitulo(busqueda.titulo());
-
-        if (respuesta == null || respuesta.resultados() == null || respuesta.resultados().isEmpty()) {
-            throw new LibroNoEncontradoException("Libro no encontrado en Gutendex: " + busqueda.titulo());
-        }
-
-        DatosGutendexLibro datosGutendex = respuesta.resultados().getFirst();
-        if (datosGutendex.id() != null) {
-            Optional<Libro> libroExistente = libroRepository.findByGutendexId(datosGutendex.id().intValue());
-            if (libroExistente.isPresent()) {
-                Libro libro = libroExistente.get();
-                return new LibroResponseDTO(
-                    libro.getId(),
-                    libro.getTitulo(),
-                    libro.getGutendexId(),
-                    libro.getAutor() != null ? libro.getAutor().getNombre() : "Desconocido",
-                    libro.getIdioma(),
-                    "Libro ya existe en la base de datos"
-                );
-            }
+    /**
+     * Registra en la base de datos un libro que el navegador ya obtuvo de Gutendex.
+     *
+     * <p>El backend no consulta Gutendex en este flujo: Cloudflare bloquea (403) las
+     * peticiones desde la IP de datacenter de Render, por lo que la búsqueda la realiza
+     * el navegador y aquí solo se deduplica por {@code gutendexId} y se persiste.</p>
+     */
+    public LibroResponseDTO registrarLibro(RegistrarLibroDTO datos) {
+        // Deduplicación canónica por gutendexId
+        Optional<Libro> libroExistente = libroRepository.findByGutendexId(datos.gutendexId().intValue());
+        if (libroExistente.isPresent()) {
+            Libro libro = libroExistente.get();
+            return new LibroResponseDTO(
+                libro.getId(),
+                libro.getTitulo(),
+                libro.getGutendexId(),
+                libro.getAutor() != null ? libro.getAutor().getNombre() : "Desconocido",
+                libro.getIdioma(),
+                "Libro ya existe en la base de datos"
+            );
         }
 
         // Crear o obtener autor
-        Autor autor = obtenerOCrearAutor(datosGutendex.autores());
+        Autor autor = obtenerOCrearAutor(datos.autores());
 
         // Crear y guardar libro
         Libro nuevoLibro = new Libro();
-        nuevoLibro.setTitulo(datosGutendex.titulo());
+        nuevoLibro.setTitulo(datos.titulo());
         nuevoLibro.setAutor(autor);
-        nuevoLibro.setIdioma(mapearIdioma(datosGutendex.idiomas()));
-        if (datosGutendex.id() != null) {
-            nuevoLibro.setGutendexId(datosGutendex.id().intValue());
-        }
+        nuevoLibro.setIdioma(mapearIdioma(datos.idiomas()));
+        nuevoLibro.setGutendexId(datos.gutendexId().intValue());
 
         Libro libroGuardado = libroRepository.save(nuevoLibro);
 

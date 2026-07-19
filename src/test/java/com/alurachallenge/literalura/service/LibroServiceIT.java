@@ -80,51 +80,52 @@ class LibroServiceIT {
         return new RespuestaGutendex(List.of(datosLibro));
     }
 
-    // --- Tests de buscarYRegistrarLibro ---
+    // --- Tests de registrarLibro (el navegador ya obtuvo el libro de Gutendex) ---
+
+    private RegistrarLibroDTO datosRegistro(long gutendexId, String titulo, String autorNombre,
+                                            int anoNac, int anoFal, String idioma) {
+        return new RegistrarLibroDTO(gutendexId, titulo,
+                List.of(new DatosGutendexAutor(autorNombre, anoNac, anoFal)),
+                List.of(idioma), 1000L);
+    }
 
     @Test
-    void buscarYRegistrarLibro_libroNuevo_deberiaGuardarEnBDYRetornarMensajeExitoso() {
-        when(clienteGutendex.buscarLibrosPorTitulo("Don Quijote"))
-                .thenReturn(mockRespuestaGutendex("Don Quijote", "Miguel de Cervantes", 1547, 1616, "es"));
-
-        LibroResponseDTO resultado = libroService.buscarYRegistrarLibro(new BusquedaLibroDTO("Don Quijote"));
+    void registrarLibro_libroNuevo_deberiaGuardarEnBDYRetornarMensajeExitoso() {
+        LibroResponseDTO resultado = libroService.registrarLibro(
+                datosRegistro(1342L, "Don Quijote", "Miguel de Cervantes", 1547, 1616, "es"));
 
         assertThat(resultado.titulo()).isEqualTo("Don Quijote");
         assertThat(resultado.autor()).isEqualTo("Miguel de Cervantes");
         assertThat(resultado.idioma()).isEqualTo(Idioma.ESPANOL);
         assertThat(resultado.mensaje()).isEqualTo("Libro registrado exitosamente");
-        assertThat(libroRepository.findByTitulo("Don Quijote")).isPresent();
+        assertThat(libroRepository.findByGutendexId(1342)).isPresent();
         assertThat(autorRepository.findByNombre("Miguel de Cervantes")).isPresent();
     }
 
     @Test
-    void buscarYRegistrarLibro_libroYaExistenteEnBD_deberiaRetornarTrasDeduplicarPorGutendexId() {
+    void registrarLibro_libroYaExistenteEnBD_deberiaRetornarTrasDeduplicarPorGutendexId() {
         Autor autor = guardarAutor("Cervantes", 1547, 1616);
         Libro libroExistente = guardarLibro("Don Quijote", autor, Idioma.ESPANOL);
         libroExistente.setGutendexId(1342);
         libroRepository.save(libroExistente);
 
-        when(clienteGutendex.buscarLibrosPorTitulo("Don Quijote"))
-                .thenReturn(new RespuestaGutendex(List.of(
-                        new DatosGutendexLibro(1342L, "Don Quijote",
-                                List.of(new DatosGutendexAutor("Cervantes", 1547, 1616)),
-                                List.of("es"), 1000L))));
-
-        LibroResponseDTO resultado = libroService.buscarYRegistrarLibro(new BusquedaLibroDTO("Don Quijote"));
+        LibroResponseDTO resultado = libroService.registrarLibro(
+                datosRegistro(1342L, "Don Quijote", "Cervantes", 1547, 1616, "es"));
 
         assertThat(resultado.mensaje()).isEqualTo("Libro ya existe en la base de datos");
-        verify(clienteGutendex, times(1)).buscarLibrosPorTitulo(anyString());
+        // No se crea un segundo libro con el mismo gutendexId
+        assertThat(libroRepository.findByGutendexId(1342)).contains(libroExistente);
     }
 
     @Test
-    void buscarYRegistrarLibro_gutendexSinResultados_deberiaLanzarExcepcion() {
-        when(clienteGutendex.buscarLibrosPorTitulo("Libro Inexistente"))
-                .thenReturn(new RespuestaGutendex(List.of()));
+    void registrarLibro_conIdiomaNoReconocido_deberiaGuardarIdiomaNull() {
+        LibroResponseDTO resultado = libroService.registrarLibro(
+                new RegistrarLibroDTO(7777L, "Libro idioma raro",
+                        List.of(new DatosGutendexAutor("Autor Desconocido", 1900, 1980)),
+                        List.of("xx"), 5L));
 
-        assertThatThrownBy(() ->
-                libroService.buscarYRegistrarLibro(new BusquedaLibroDTO("Libro Inexistente")))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("no encontrado en Gutendex");
+        assertThat(resultado.idioma()).isNull();
+        assertThat(libroRepository.findByGutendexId(7777)).isPresent();
     }
 
     // --- Tests de buscarLibroPorTitulo ---
@@ -333,19 +334,14 @@ class LibroServiceIT {
     // --- Test de deduplicación por gutendexId (reemplaza deduplicación por título) ---
 
     @Test
-    void buscarYRegistrarLibro_gutendexIdYaRegistrado_noDeberiaCrearDuplicado() {
+    void registrarLibro_gutendexIdYaRegistrado_noDeberiaCrearDuplicado() {
         Autor autor = guardarAutor("Miguel de Cervantes Dedup", 1547, 1616);
         Libro libroExistente = guardarLibro("Don Quijote Dedup", autor, Idioma.ESPANOL);
         libroExistente.setGutendexId(5000);
         libroRepository.save(libroExistente);
 
-        when(clienteGutendex.buscarLibrosPorTitulo("Don Quijote Dedup"))
-                .thenReturn(new RespuestaGutendex(List.of(
-                        new DatosGutendexLibro(5000L, "Don Quijote Dedup",
-                                List.of(new DatosGutendexAutor("Miguel de Cervantes Dedup", 1547, 1616)),
-                                List.of("es"), 1000L))));
-
-        LibroResponseDTO resultado = libroService.buscarYRegistrarLibro(new BusquedaLibroDTO("Don Quijote Dedup"));
+        LibroResponseDTO resultado = libroService.registrarLibro(
+                datosRegistro(5000L, "Don Quijote Dedup", "Miguel de Cervantes Dedup", 1547, 1616, "es"));
 
         assertThat(resultado.mensaje()).isEqualTo("Libro ya existe en la base de datos");
         assertThat(libroRepository.findByGutendexId(5000)).isPresent();

@@ -2,12 +2,11 @@ package com.alurachallenge.literalura.controller;
 
 import com.alurachallenge.literalura.dto.ActualizarLibroDTO;
 import com.alurachallenge.literalura.dto.ActualizarNotaDTO;
-import com.alurachallenge.literalura.dto.BusquedaLibroDTO;
+import com.alurachallenge.literalura.dto.RegistrarLibroDTO;
 import com.alurachallenge.literalura.dto.LibroActualizadoResponseDTO;
 import com.alurachallenge.literalura.dto.LibroDetalleResponseDTO;
 import com.alurachallenge.literalura.dto.LibroResponseDTO;
 import com.alurachallenge.literalura.exception.GlobalExceptionHandler;
-import com.alurachallenge.literalura.exception.LibroNoEncontradoException;
 import com.alurachallenge.literalura.exception.ResourceNotFoundException;
 import com.alurachallenge.literalura.model.Idioma;
 import com.alurachallenge.literalura.service.LibroService;
@@ -41,10 +40,16 @@ class LibroControllerTest {
     @MockitoBean
     private LibroService libroService;
 
+    private static final String LIBRO_GUTENDEX_JSON = """
+            {"gutendexId":1342,"titulo":"Don Quijote",
+             "autores":[{"nombre":"Miguel de Cervantes","anoNacimiento":1547,"anoFallecimiento":1616}],
+             "idiomas":["es"],"descargas":1000}
+            """;
+
     @Test
-    void buscarYRegistrar_ok_deberiaRetornar201ConBody() throws Exception {
+    void registrar_ok_deberiaRetornar201ConBody() throws Exception {
         // Arrange
-        when(libroService.buscarYRegistrarLibro(any(BusquedaLibroDTO.class)))
+        when(libroService.registrarLibro(any(RegistrarLibroDTO.class)))
                 .thenReturn(new LibroResponseDTO(
                         1L, "Don Quijote", 1342, "Miguel de Cervantes", Idioma.ESPANOL, "Libro registrado exitosamente"
                 ));
@@ -52,7 +57,7 @@ class LibroControllerTest {
         // Act & Assert
         mockMvc.perform(post("/api/libros/buscar-y-registrar")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"titulo\":\"Don Quijote\"}"))
+                        .content(LIBRO_GUTENDEX_JSON))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.titulo").value("Don Quijote"))
@@ -61,41 +66,42 @@ class LibroControllerTest {
     }
 
     @Test
-    void buscarYRegistrar_libroNoEncontrado_deberiaRetornar404ConMensaje() throws Exception {
+    void registrar_libroDuplicado_deberiaRetornar201ConMensajeYaExiste() throws Exception {
         // Arrange
-        when(libroService.buscarYRegistrarLibro(any(BusquedaLibroDTO.class)))
-                .thenThrow(new LibroNoEncontradoException("Libro no encontrado en Gutendex: Fantasma"));
+        when(libroService.registrarLibro(any(RegistrarLibroDTO.class)))
+                .thenReturn(new LibroResponseDTO(
+                        7L, "Don Quijote", 1342, "Miguel de Cervantes", Idioma.ESPANOL, "Libro ya existe en la base de datos"
+                ));
 
         // Act & Assert
         mockMvc.perform(post("/api/libros/buscar-y-registrar")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"titulo\":\"Fantasma\"}"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.mensaje").value("Libro no encontrado en Gutendex: Fantasma"));
+                        .content(LIBRO_GUTENDEX_JSON))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.mensaje").value("Libro ya existe en la base de datos"));
     }
 
     @Test
-    void buscarYRegistrar_errorInterno_deberiaRetornar500() throws Exception {
+    void registrar_errorInterno_deberiaRetornar500() throws Exception {
         // Arrange
-        when(libroService.buscarYRegistrarLibro(any(BusquedaLibroDTO.class)))
+        when(libroService.registrarLibro(any(RegistrarLibroDTO.class)))
                 .thenThrow(new IllegalStateException("Fallo interno"));
 
         // Act & Assert
         mockMvc.perform(post("/api/libros/buscar-y-registrar")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"titulo\":\"X\"}"))
+                        .content(LIBRO_GUTENDEX_JSON))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.status").value(500))
                 .andExpect(jsonPath("$.mensaje").value("Fallo interno"));
     }
 
     @Test
-    void buscarYRegistrar_conTituloEnBlanco_deberiaRetornar400PorValidacion() throws Exception {
-        // Act & Assert (sin arrange: @NotBlank rechaza el body antes de llegar al servicio)
+    void registrar_sinGutendexId_deberiaRetornar400PorValidacion() throws Exception {
+        // Act & Assert (sin arrange: @NotNull sobre gutendexId rechaza el body antes del servicio)
         mockMvc.perform(post("/api/libros/buscar-y-registrar")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"titulo\":\"   \"}"))
+                        .content("{\"titulo\":\"Don Quijote\",\"idiomas\":[\"es\"]}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.mensaje").value("Validación fallida"));

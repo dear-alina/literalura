@@ -1,6 +1,6 @@
 package com.alurachallenge.literalura.controller;
 
-import com.alurachallenge.literalura.dto.BusquedaLibroDTO;
+import com.alurachallenge.literalura.dto.RegistrarLibroDTO;
 import com.alurachallenge.literalura.dto.LibroResponseDTO;
 import com.alurachallenge.literalura.dto.LibroDetalleResponseDTO;
 import com.alurachallenge.literalura.dto.LibroListResponseDTO;
@@ -32,10 +32,12 @@ public class LibroController {
     
     // ── 1. POST ──────────────────────────────────────────────────────────────
 
+    // El navegador consulta Gutendex (Cloudflare bloquea a Render por IP) y envía
+    // aquí el libro ya resuelto; el backend solo deduplica y persiste.
     @PostMapping("/buscar-y-registrar")
     public ResponseEntity<LibroResponseDTO> buscarYRegistrar(
-            @Valid @RequestBody BusquedaLibroDTO busqueda) {
-        LibroResponseDTO respuesta = libroService.buscarYRegistrarLibro(busqueda);
+            @Valid @RequestBody RegistrarLibroDTO datos) {
+        LibroResponseDTO respuesta = libroService.registrarLibro(datos);
         return ResponseEntity.status(HttpStatus.CREATED).body(respuesta);
     }
 

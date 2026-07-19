@@ -2,8 +2,9 @@ package com.alurachallenge.literalura.service;
 
 import com.alurachallenge.literalura.dto.ActualizarLibroDTO;
 import com.alurachallenge.literalura.dto.ActualizarNotaDTO;
-import com.alurachallenge.literalura.dto.BusquedaLibroDTO;
+import com.alurachallenge.literalura.dto.DatosGutendexAutor;
 import com.alurachallenge.literalura.dto.DatosGutendexLibro;
+import com.alurachallenge.literalura.dto.RegistrarLibroDTO;
 import com.alurachallenge.literalura.dto.LibroActualizadoResponseDTO;
 import com.alurachallenge.literalura.dto.LibroDetalleResponseDTO;
 import com.alurachallenge.literalura.dto.LibroListResponseDTO;
@@ -51,18 +52,7 @@ class LibroServiceTest {
     private LibroService libroService;
 
     @Test
-    void buscarYRegistrarLibro_conRespuestaVacia_deberiaLanzarLibroNoEncontradoException() {
-        // Arrange
-        when(clienteGutendex.buscarLibrosPorTitulo("X")).thenReturn(new RespuestaGutendex(List.of()));
-
-        // Act & Assert
-        assertThatThrownBy(() -> libroService.buscarYRegistrarLibro(new BusquedaLibroDTO("X")))
-                .isInstanceOf(LibroNoEncontradoException.class)
-                .hasMessageContaining("no encontrado en Gutendex");
-    }
-
-    @Test
-    void buscarYRegistrarLibro_siExistePorGutendexId_deberiaRetornarExistente() {
+    void registrarLibro_siExistePorGutendexId_deberiaRetornarExistenteSinPersistir() {
         // Arrange
         Libro existente = new Libro();
         existente.setId(1L);
@@ -71,15 +61,13 @@ class LibroServiceTest {
         existente.setIdioma(Idioma.ESPANOL);
         existente.setAutor(null);
 
-        DatosGutendexLibro datos = new DatosGutendexLibro(
-                1342L, "Don Quijote", List.of(), List.of("es"), 1000L);
-
-        when(clienteGutendex.buscarLibrosPorTitulo("Don Quijote"))
-                .thenReturn(new RespuestaGutendex(List.of(datos)));
         when(libroRepository.findByGutendexId(1342)).thenReturn(Optional.of(existente));
 
+        RegistrarLibroDTO datos = new RegistrarLibroDTO(
+                1342L, "Don Quijote", List.of(), List.of("es"), 1000L);
+
         // Act
-        LibroResponseDTO resultado = libroService.buscarYRegistrarLibro(new BusquedaLibroDTO("Don Quijote"));
+        LibroResponseDTO resultado = libroService.registrarLibro(datos);
 
         // Assert
         assertThat(resultado.mensaje()).isEqualTo("Libro ya existe en la base de datos");
@@ -88,20 +76,49 @@ class LibroServiceTest {
     }
 
     @Test
-    void buscarYRegistrarLibro_conAutorEIdiomaInvalidos_deberiaGuardarConNulos() {
+    void registrarLibro_libroNuevo_deberiaPersistirYRetornarMensajeExitoso() {
         // Arrange
-        DatosGutendexLibro datos = new DatosGutendexLibro(
-                null, "Libro sin datos", null, List.of("xx"), 10L);
-        when(clienteGutendex.buscarLibrosPorTitulo("Libro sin datos"))
-                .thenReturn(new RespuestaGutendex(List.of(datos)));
+        when(libroRepository.findByGutendexId(1342)).thenReturn(Optional.empty());
+        when(autorRepository.findByNombre("Miguel de Cervantes")).thenReturn(Optional.empty());
+        when(autorRepository.save(any(Autor.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(libroRepository.save(any(Libro.class))).thenAnswer(invocation -> {
             Libro l = invocation.getArgument(0);
             l.setId(50L);
             return l;
         });
 
+        RegistrarLibroDTO datos = new RegistrarLibroDTO(
+                1342L, "Don Quijote",
+                List.of(new DatosGutendexAutor("Miguel de Cervantes", 1547, 1616)),
+                List.of("es"), 1000L);
+
         // Act
-        LibroResponseDTO resultado = libroService.buscarYRegistrarLibro(new BusquedaLibroDTO("Libro sin datos"));
+        LibroResponseDTO resultado = libroService.registrarLibro(datos);
+
+        // Assert
+        assertThat(resultado.id()).isEqualTo(50L);
+        assertThat(resultado.titulo()).isEqualTo("Don Quijote");
+        assertThat(resultado.gutendexId()).isEqualTo(1342);
+        assertThat(resultado.idioma()).isEqualTo(Idioma.ESPANOL);
+        assertThat(resultado.autor()).isEqualTo("Miguel de Cervantes");
+        assertThat(resultado.mensaje()).isEqualTo("Libro registrado exitosamente");
+    }
+
+    @Test
+    void registrarLibro_conAutorEIdiomaInvalidos_deberiaGuardarConNulos() {
+        // Arrange
+        when(libroRepository.findByGutendexId(9999)).thenReturn(Optional.empty());
+        when(libroRepository.save(any(Libro.class))).thenAnswer(invocation -> {
+            Libro l = invocation.getArgument(0);
+            l.setId(50L);
+            return l;
+        });
+
+        RegistrarLibroDTO datos = new RegistrarLibroDTO(
+                9999L, "Libro sin datos", null, List.of("xx"), 10L);
+
+        // Act
+        LibroResponseDTO resultado = libroService.registrarLibro(datos);
 
         // Assert
         assertThat(resultado.id()).isEqualTo(50L);

@@ -1,29 +1,21 @@
 package com.alurachallenge.literalura.controller;
 
 import com.alurachallenge.literalura.BaseE2ETest;
-import com.alurachallenge.literalura.dto.DatosGutendexAutor;
-import com.alurachallenge.literalura.dto.DatosGutendexLibro;
-import com.alurachallenge.literalura.dto.RespuestaGutendex;
 import com.alurachallenge.literalura.model.Autor;
 import com.alurachallenge.literalura.model.Idioma;
 import com.alurachallenge.literalura.model.Libro;
 import com.alurachallenge.literalura.repository.AutorRepository;
 import com.alurachallenge.literalura.repository.LibroRepository;
-import com.alurachallenge.literalura.service.ClienteGutendex;
 import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import java.util.List;
 import java.util.Optional;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
 
 class LibroControllerE2ETest extends BaseE2ETest {
     private static final String BUSCAR_REGISTRAR_ENDPOINT = "/api/libros/buscar-y-registrar";
@@ -37,9 +29,6 @@ class LibroControllerE2ETest extends BaseE2ETest {
     @Autowired
     private AutorRepository autorRepository;
 
-    @MockitoBean
-    private ClienteGutendex clienteGutendex;
-
     @BeforeEach
     void setUpE2E() {
         apiSpec = requestSpec();
@@ -48,22 +37,14 @@ class LibroControllerE2ETest extends BaseE2ETest {
     }
 
     @Test
-    void postBuscarYRegistrar_deberiaPersistirEnPostgreSQLYRetornar201() {
-        when(clienteGutendex.buscarLibrosPorTitulo("Don Quijote")).thenReturn(
-                new RespuestaGutendex(List.of(
-                        new DatosGutendexLibro(
-                                1342L,
-                                "Don Quijote",
-                                List.of(new DatosGutendexAutor("Miguel de Cervantes", 1547, 1616)),
-                                List.of("es"),
-                                1000L
-                        )
-                )));
-
+    void postBuscarYRegistrar_conLibroDeGutendex_deberiaPersistirEnPostgreSQLYRetornar201() {
+        // El navegador ya obtuvo el libro de Gutendex y envía sus datos al backend
         given().spec(apiSpec)
                 .contentType("application/json")
                 .body("""
-                        {"titulo":"Don Quijote"}
+                        {"gutendexId":1342,"titulo":"Don Quijote",
+                         "autores":[{"nombre":"Miguel de Cervantes","anoNacimiento":1547,"anoFallecimiento":1616}],
+                         "idiomas":["es"],"descargas":1000}
                         """)
         .when()
                 .post(BUSCAR_REGISTRAR_ENDPOINT)
